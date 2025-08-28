@@ -9,6 +9,7 @@ import {
   Linking,
   Platform,
   Alert,
+  ActivityIndicator,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import * as Location from 'expo-location';
@@ -21,105 +22,60 @@ import {
   Clock, 
   Heart,
   Building2,
-  Pill
+  Pill,
+  RefreshCw
 } from 'lucide-react-native';
+import { getNearbyFacilities, MedicalFacility } from '@/utils/medicalFacilities';
 
-interface MedicalFacility {
-  id: string;
-  name: string;
-  type: 'hospital' | 'clinic' | 'pharmacy';
-  address: string;
-  phone: string;
-  distance: string;
-  estimatedTime: string;
-  isOpen: boolean;
-  specialties?: string[];
-  coordinates: {
-    latitude: number;
-    longitude: number;
-  };
-}
-
-const nearbyFacilities: MedicalFacility[] = [
-  {
-    id: '1',
-    name: 'Salem Government Hospital',
-    type: 'hospital',
-    address: 'Omalur Main Road, Salem',
-    phone: '+91-427-2444444',
-    distance: '1.1 km',
-    estimatedTime: '3 mins',
-    isOpen: true,
-    specialties: ['Emergency', 'Trauma', 'ICU'],
-    coordinates: { latitude: 11.6740, longitude: 78.1489 }
-  },
-  {
-    id: '2',
-    name: 'Manipal Hospital Salem',
-    type: 'hospital',
-    address: 'Dalmia Board, Salem',
-    phone: '+91-427-2677777',
-    distance: '2.1 km',
-    estimatedTime: '6 mins',
-    isOpen: true,
-    specialties: ['Emergency', 'Cardiology', 'Neurology'],
-    coordinates: { latitude: 11.6640, longitude: 78.1389 }
-  },
-  {
-    id: '3',
-    name: 'KMC Specialty Hospital',
-    type: 'hospital',
-    address: 'Attur Road, Salem',
-    phone: '+91-427-2555555',
-    distance: '3.2 km',
-    estimatedTime: '8 mins',
-    isOpen: true,
-    specialties: ['Emergency', 'Orthopedics', 'Surgery'],
-    coordinates: { latitude: 11.6540, longitude: 78.1289 }
-  },
-  {
-    id: '4',
-    name: 'Apollo Pharmacy',
-    type: 'pharmacy',
-    address: 'Junction Main Road, Salem',
-    phone: '+91-427-2333333',
-    distance: '0.8 km',
-    estimatedTime: '2 mins',
-    isOpen: true,
-    coordinates: { latitude: 11.6780, longitude: 78.1520 }
-  },
-  {
-    id: '5',
-    name: 'MedPlus Pharmacy',
-    type: 'pharmacy',
-    address: 'Cherry Road, Salem',
-    phone: '+91-427-2222222',
-    distance: '1.5 km',
-    estimatedTime: '4 mins',
-    isOpen: false,
-    coordinates: { latitude: 11.6680, longitude: 78.1420 }
-  }
-];
 
 export default function GoToSaveScreen() {
   const router = useRouter();
   const [userLocation, setUserLocation] = useState<Location.LocationObject | null>(null);
+  const [nearbyFacilities, setNearbyFacilities] = useState<MedicalFacility[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [locationError, setLocationError] = useState<string | null>(null);
   const [selectedCategory, setSelectedCategory] = useState<'all' | 'hospital' | 'pharmacy'>('all');
 
   useEffect(() => {
-    getCurrentLocation();
+    initializeLocation();
   }, []);
 
-  const getCurrentLocation = async () => {
+  const initializeLocation = async () => {
+    setIsLoading(true);
+    setLocationError(null);
+    
     try {
       const { status } = await Location.requestForegroundPermissionsAsync();
-      if (status === 'granted') {
-        const location = await Location.getCurrentPositionAsync({});
-        setUserLocation(location);
+      
+      if (status !== 'granted') {
+        setLocationError('Location permission denied. Please enable location services.');
+        setIsLoading(false);
+        return;
       }
+
+      const location = await Location.getCurrentPositionAsync({
+        accuracy: Location.Accuracy.High,
+      });
+      
+      setUserLocation(location);
+      
+      // Get nearby facilities based on current location
+      const facilities = await getNearbyFacilities(location);
+      setNearbyFacilities(facilities);
+      
     } catch (error) {
-      console.error('Failed to get location:', error);
+      console.error('Failed to get location and facilities:', error);
+      setLocationError('Unable to get your location. Please check your GPS settings.');
+    } finally {
+      setIsLoading(false);
     }
+  };
+
+  const refreshLocation = async () => {
+    if (Platform.OS !== 'web') {
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+    }
+    await initializeLocation();
   };
 
   const openDirections = async (facility: MedicalFacility) => {
@@ -172,6 +128,51 @@ export default function GoToSaveScreen() {
     selectedCategory === 'all' || facility.type === selectedCategory
   );
 
+  if (isLoading) {
+    return (
+      <SafeAreaView style={styles.container}>
+        <View style={styles.header}>
+          <TouchableOpacity style={styles.backButton} onPress={() => router.back()}>
+            <ArrowLeft size={24} color="#FFFFFF" />
+          </TouchableOpacity>
+          <Text style={styles.headerTitle}>Medical Help Nearby</Text>
+          <View style={styles.headerButton} />
+        </View>
+        <View style={styles.loadingContainer}>
+          <ActivityIndicator size="large" color="#DC2626" />
+          <Text style={styles.loadingText}>Finding nearby medical facilities...</Text>
+          <Text style={styles.loadingSubtext}>Getting your location and searching for hospitals</Text>
+        </View>
+      </SafeAreaView>
+    );
+  }
+
+  if (locationError) {
+    return (
+      <SafeAreaView style={styles.container}>
+        <View style={styles.header}>
+          <TouchableOpacity style={styles.backButton} onPress={() => router.back()}>
+            <ArrowLeft size={24} color="#FFFFFF" />
+          </TouchableOpacity>
+          <Text style={styles.headerTitle}>Medical Help Nearby</Text>
+          <View style={styles.headerButton} />
+        </View>
+        <View style={styles.errorContainer}>
+          <MapPin size={48} color="#EF4444" />
+          <Text style={styles.errorTitle}>Location Required</Text>
+          <Text style={styles.errorText}>{locationError}</Text>
+          <TouchableOpacity style={styles.retryButton} onPress={refreshLocation}>
+            <RefreshCw size={20} color="#FFFFFF" />
+            <Text style={styles.retryButtonText}>Try Again</Text>
+          </TouchableOpacity>
+        </View>
+      </SafeAreaView>
+    );
+  }
+
+    selectedCategory === 'all' || facility.type === selectedCategory
+  );
+
   const getTypeIcon = (type: string) => {
     switch (type) {
       case 'hospital':
@@ -182,9 +183,6 @@ export default function GoToSaveScreen() {
         return <Pill size={20} color="#059669" />;
       default:
         return <Heart size={20} color="#DC2626" />;
-    }
-  };
-
   return (
     <SafeAreaView style={styles.container}>
       <View style={styles.header}>
@@ -192,7 +190,7 @@ export default function GoToSaveScreen() {
           <ArrowLeft size={24} color="#FFFFFF" />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Medical Help Nearby</Text>
-        <TouchableOpacity style={styles.mapButton} onPress={openInGoogleMaps}>
+        <TouchableOpacity style={styles.headerButton} onPress={openInGoogleMaps}>
           <MapPin size={24} color="#FFFFFF" />
         </TouchableOpacity>
       </View>
@@ -202,9 +200,12 @@ export default function GoToSaveScreen() {
         <Text style={styles.locationText}>
           {userLocation 
             ? `${userLocation.coords.latitude.toFixed(4)}, ${userLocation.coords.longitude.toFixed(4)}`
-            : 'Getting your location...'
+            : 'Location not available'
           }
         </Text>
+        <TouchableOpacity style={styles.refreshButton} onPress={refreshLocation}>
+          <RefreshCw size={16} color="#10B981" />
+        </TouchableOpacity>
       </View>
 
       <View style={styles.categoryFilter}>
@@ -234,6 +235,12 @@ export default function GoToSaveScreen() {
         </TouchableOpacity>
       </View>
 
+      {filteredFacilities.length === 0 && (
+        <View style={styles.noResultsContainer}>
+          <Text style={styles.noResultsText}>No {selectedCategory === 'all' ? 'medical facilities' : selectedCategory + 's'} found nearby</Text>
+        </View>
+      )}
+
       <ScrollView style={styles.facilitiesList} showsVerticalScrollIndicator={false}>
         {filteredFacilities.map((facility) => (
           <View key={facility.id} style={styles.facilityCard}>
@@ -260,7 +267,7 @@ export default function GoToSaveScreen() {
             <View style={styles.facilityMeta}>
               <View style={styles.metaItem}>
                 <MapPin size={16} color="#6B7280" />
-                <Text style={styles.metaText}>{facility.distance}</Text>
+                <Text style={styles.metaText}>{facility.distance.toFixed(1)} km</Text>
               </View>
               <View style={styles.metaItem}>
                 <Clock size={16} color="#6B7280" />
@@ -329,7 +336,7 @@ const styles = StyleSheet.create({
     fontFamily: 'Inter-Bold',
     color: '#FFFFFF',
   },
-  mapButton: {
+  headerButton: {
     width: 40,
     height: 40,
     justifyContent: 'center',
@@ -340,6 +347,7 @@ const styles = StyleSheet.create({
   locationBar: {
     flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'space-between',
     paddingHorizontal: 20,
     paddingVertical: 12,
     backgroundColor: '#1E293B',
@@ -351,6 +359,12 @@ const styles = StyleSheet.create({
     fontFamily: 'Inter-Regular',
     color: '#10B981',
     marginLeft: 8,
+    flex: 1,
+  },
+  refreshButton: {
+    padding: 8,
+    backgroundColor: 'rgba(16, 185, 129, 0.2)',
+    borderRadius: 16,
   },
   categoryFilter: {
     flexDirection: 'row',
@@ -508,5 +522,70 @@ const styles = StyleSheet.create({
     fontFamily: 'Inter-Bold',
     color: '#FFFFFF',
     marginLeft: 8,
+  },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 40,
+  },
+  loadingText: {
+    fontSize: 18,
+    fontFamily: 'Inter-Bold',
+    color: '#FFFFFF',
+    marginTop: 20,
+    textAlign: 'center',
+  },
+  loadingSubtext: {
+    fontSize: 14,
+    fontFamily: 'Inter-Regular',
+    color: '#94A3B8',
+    marginTop: 8,
+    textAlign: 'center',
+  },
+  errorContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 40,
+  },
+  errorTitle: {
+    fontSize: 20,
+    fontFamily: 'Inter-Bold',
+    color: '#FFFFFF',
+    marginTop: 16,
+    marginBottom: 8,
+  },
+  errorText: {
+    fontSize: 16,
+    fontFamily: 'Inter-Regular',
+    color: '#94A3B8',
+    textAlign: 'center',
+    lineHeight: 24,
+    marginBottom: 24,
+  },
+  retryButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#DC2626',
+    paddingHorizontal: 20,
+    paddingVertical: 12,
+    borderRadius: 8,
+    gap: 8,
+  },
+  retryButtonText: {
+    fontSize: 16,
+    fontFamily: 'Inter-SemiBold',
+    color: '#FFFFFF',
+  },
+  noResultsContainer: {
+    padding: 40,
+    alignItems: 'center',
+  },
+  noResultsText: {
+    fontSize: 16,
+    fontFamily: 'Inter-Regular',
+    color: '#94A3B8',
+    textAlign: 'center',
   },
 });
