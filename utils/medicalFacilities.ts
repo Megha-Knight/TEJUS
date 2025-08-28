@@ -1,5 +1,5 @@
 import * as Location from 'expo-location';
-import { Linking } from 'react-native';
+import { Linking, Platform } from 'react-native';
 
 export interface MedicalFacility {
   id: string;
@@ -20,97 +20,75 @@ export interface MedicalFacility {
   hasAmbulance?: boolean;
 }
 
-// Mock data for Tamil Nadu medical facilities
-export const tamilNaduMedicalFacilities: MedicalFacility[] = [
-  {
-    id: '1',
-    name: 'Salem Government Hospital',
-    type: 'hospital',
-    address: 'Omalur Main Road, Salem, Tamil Nadu 636003',
-    phone: '+91-427-2444444',
-    distance: 1.1,
-    estimatedTime: '3 mins',
-    isOpen: true,
-    rating: 4.2,
-    specialties: ['Emergency Medicine', 'Trauma Care', 'ICU', 'Surgery'],
-    coordinates: { latitude: 11.6740, longitude: 78.1489 },
-    emergencyServices: true,
-    hasAmbulance: true
-  },
-  {
-    id: '2',
-    name: 'Manipal Hospital Salem',
-    type: 'hospital',
-    address: 'Dalmia Board, Salem, Tamil Nadu 636004',
-    phone: '+91-427-2677777',
-    distance: 2.1,
-    estimatedTime: '6 mins',
-    isOpen: true,
-    rating: 4.5,
-    specialties: ['Emergency', 'Cardiology', 'Neurology', 'Orthopedics'],
-    coordinates: { latitude: 11.6640, longitude: 78.1389 },
-    emergencyServices: true,
-    hasAmbulance: true
-  },
-  {
-    id: '3',
-    name: 'KMC Specialty Hospital',
-    type: 'hospital',
-    address: 'Attur Road, Salem, Tamil Nadu 636007',
-    phone: '+91-427-2555555',
-    distance: 3.2,
-    estimatedTime: '8 mins',
-    isOpen: true,
-    rating: 4.3,
-    specialties: ['Emergency', 'Orthopedics', 'General Surgery', 'Pediatrics'],
-    coordinates: { latitude: 11.6540, longitude: 78.1289 },
-    emergencyServices: true,
-    hasAmbulance: false
-  },
-  {
-    id: '4',
-    name: 'Apollo Pharmacy',
-    type: 'pharmacy',
-    address: 'Junction Main Road, Salem, Tamil Nadu 636001',
-    phone: '+91-427-2333333',
-    distance: 0.8,
-    estimatedTime: '2 mins',
-    isOpen: true,
-    rating: 4.1,
-    coordinates: { latitude: 11.6780, longitude: 78.1520 },
-    emergencyServices: false,
-    hasAmbulance: false
-  },
-  {
-    id: '5',
-    name: 'MedPlus Pharmacy',
-    type: 'pharmacy',
-    address: 'Cherry Road, Salem, Tamil Nadu 636002',
-    phone: '+91-427-2222222',
-    distance: 1.5,
-    estimatedTime: '4 mins',
-    isOpen: false,
-    rating: 3.9,
-    coordinates: { latitude: 11.6680, longitude: 78.1420 },
-    emergencyServices: false,
-    hasAmbulance: false
-  },
-  {
-    id: '6',
-    name: 'Primary Health Centre',
-    type: 'clinic',
-    address: 'Mettur Road, Salem, Tamil Nadu 636005',
-    phone: '+91-427-2111111',
-    distance: 2.8,
-    estimatedTime: '7 mins',
-    isOpen: true,
-    rating: 3.8,
-    specialties: ['General Medicine', 'Basic Emergency Care'],
-    coordinates: { latitude: 11.6440, longitude: 78.1189 },
-    emergencyServices: true,
-    hasAmbulance: false
+// Function to search for nearby medical facilities using Google Places API simulation
+const searchNearbyFacilities = async (
+  latitude: number,
+  longitude: number,
+  type: 'hospital' | 'pharmacy' | 'clinic',
+  radius: number = 10000 // 10km radius
+): Promise<MedicalFacility[]> => {
+  // In a real app, this would call Google Places API or similar service
+  // For now, we'll simulate the API response with realistic data
+  
+  const facilityTemplates = {
+    hospital: [
+      { name: 'Government Hospital', phone: '+91-427-244', specialties: ['Emergency', 'Trauma', 'ICU'] },
+      { name: 'Apollo Hospital', phone: '+91-427-267', specialties: ['Emergency', 'Cardiology', 'Neurology'] },
+      { name: 'Manipal Hospital', phone: '+91-427-255', specialties: ['Emergency', 'Orthopedics', 'Surgery'] },
+      { name: 'KMC Hospital', phone: '+91-427-233', specialties: ['Emergency', 'Pediatrics', 'General Medicine'] },
+      { name: 'Primary Health Centre', phone: '+91-427-211', specialties: ['General Medicine', 'Basic Emergency'] },
+    ],
+    pharmacy: [
+      { name: 'Apollo Pharmacy', phone: '+91-427-333' },
+      { name: 'MedPlus', phone: '+91-427-222' },
+      { name: 'Netmeds', phone: '+91-427-444' },
+      { name: 'Wellness Forever', phone: '+91-427-555' },
+      { name: 'Local Medical Store', phone: '+91-427-666' },
+    ],
+    clinic: [
+      { name: 'Family Clinic', phone: '+91-427-777', specialties: ['General Medicine'] },
+      { name: 'Dental Clinic', phone: '+91-427-888', specialties: ['Dental Care'] },
+      { name: 'Eye Care Center', phone: '+91-427-999', specialties: ['Ophthalmology'] },
+    ]
+  };
+
+  const templates = facilityTemplates[type];
+  const facilities: MedicalFacility[] = [];
+
+  // Generate realistic nearby facilities
+  for (let i = 0; i < Math.min(templates.length, 5); i++) {
+    const template = templates[i];
+    const distance = Math.random() * 8 + 0.5; // 0.5 to 8.5 km
+    const estimatedTime = Math.ceil(distance * 2.5); // Rough estimate
+    
+    // Generate coordinates within radius
+    const angle = Math.random() * 2 * Math.PI;
+    const radiusInDegrees = (distance / 111); // Rough conversion km to degrees
+    const facilityLat = latitude + (radiusInDegrees * Math.cos(angle));
+    const facilityLng = longitude + (radiusInDegrees * Math.sin(angle));
+
+    facilities.push({
+      id: `${type}_${i + 1}`,
+      name: template.name,
+      type,
+      address: `Near ${template.name}, Tamil Nadu`,
+      phone: `${template.phone}${Math.floor(1000 + Math.random() * 9000)}`,
+      distance,
+      estimatedTime: `${estimatedTime} mins`,
+      isOpen: Math.random() > 0.2, // 80% chance of being open
+      rating: 3.5 + Math.random() * 1.5,
+      specialties: template.specialties,
+      coordinates: {
+        latitude: facilityLat,
+        longitude: facilityLng,
+      },
+      emergencyServices: type === 'hospital',
+      hasAmbulance: type === 'hospital' && Math.random() > 0.3,
+    });
   }
-];
+
+  return facilities.sort((a, b) => a.distance - b.distance);
+};
 
 export const calculateDistance = (
   userLat: number,
@@ -135,25 +113,62 @@ export const getNearbyFacilities = async (
 ): Promise<MedicalFacility[]> => {
   const { latitude, longitude } = userLocation.coords;
   
-  let facilities = tamilNaduMedicalFacilities.map(facility => ({
-    ...facility,
-    distance: calculateDistance(latitude, longitude, facility.coordinates.latitude, facility.coordinates.longitude)
-  }));
+  try {
+    // Search for different types of facilities
+    const hospitalPromise = searchNearbyFacilities(latitude, longitude, 'hospital');
+    const pharmacyPromise = searchNearbyFacilities(latitude, longitude, 'pharmacy');
+    const clinicPromise = searchNearbyFacilities(latitude, longitude, 'clinic');
+    
+    const [hospitals, pharmacies, clinics] = await Promise.all([
+      hospitalPromise,
+      pharmacyPromise,
+      clinicPromise
+    ]);
+    
+    let allFacilities = [...hospitals, ...pharmacies, ...clinics];
 
-  if (type) {
-    facilities = facilities.filter(facility => facility.type === type);
+    if (type) {
+      allFacilities = allFacilities.filter(facility => facility.type === type);
+    }
+
+    // Sort by distance and limit results
+    allFacilities.sort((a, b) => a.distance - b.distance);
+    
+    return allFacilities.slice(0, 20); // Limit to 20 nearest facilities
+    
+  } catch (error) {
+    console.error('Failed to get nearby facilities:', error);
+    return [];
   }
+};
 
-  // Sort by distance
-  facilities.sort((a, b) => a.distance - b.distance);
+// Function to get address from coordinates (reverse geocoding simulation)
+export const getAddressFromCoordinates = async (
+  latitude: number,
+  longitude: number
+): Promise<string> => {
+  try {
+    // In a real app, this would use Google Geocoding API or similar
+    // For now, we'll return a simulated address
+    const areas = ['Main Road', 'Junction', 'Bus Stand', 'Railway Station', 'Market'];
+    const cities = ['Salem', 'Chennai', 'Coimbatore', 'Madurai', 'Trichy'];
+    
+    const randomArea = areas[Math.floor(Math.random() * areas.length)];
+    const randomCity = cities[Math.floor(Math.random() * cities.length)];
+    
+    return `Near ${randomArea}, ${randomCity}, Tamil Nadu`;
+  } catch (error) {
+    return 'Tamil Nadu, India';
+  }
+};
 
-  // Update estimated time based on actual distance
-  facilities = facilities.map(facility => ({
-    ...facility,
-    estimatedTime: `${Math.ceil(facility.distance * 2)} mins` // Rough estimate: 2 mins per km
-  }));
-
-  return facilities;
+// Function to search for specific facility types near user
+export const searchFacilitiesByType = async (
+  userLocation: Location.LocationObject,
+  facilityType: 'hospital' | 'pharmacy' | 'clinic'
+): Promise<MedicalFacility[]> => {
+  const { latitude, longitude } = userLocation.coords;
+  return await searchNearbyFacilities(latitude, longitude, facilityType);
 };
 
 export const openDirectionsToFacility = async (facility: MedicalFacility): Promise<void> => {
