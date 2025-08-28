@@ -13,6 +13,7 @@ import { useRouter } from 'expo-router';
 import * as Location from 'expo-location';
 import * as SMS from 'expo-sms';
 import * as Haptics from 'expo-haptics';
+import { Linking } from 'react-native';
 import { ArrowLeft, MapPin, MessageSquare, Send, Database, X, CircleCheck as CheckCircle } from 'lucide-react-native';
 
 export default function SMSToSaveScreen() {
