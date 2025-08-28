@@ -170,9 +170,6 @@ export default function GoToSaveScreen() {
     );
   }
 
-    selectedCategory === 'all' || facility.type === selectedCategory
-  );
-
   const getTypeIcon = (type: string) => {
     switch (type) {
       case 'hospital':
@@ -183,6 +180,9 @@ export default function GoToSaveScreen() {
         return <Pill size={20} color="#059669" />;
       default:
         return <Heart size={20} color="#DC2626" />;
+    }
+  };
+
   return (
     <SafeAreaView style={styles.container}>
       <View style={styles.header}>
