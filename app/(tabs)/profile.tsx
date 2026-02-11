@@ -20,7 +20,7 @@ export default function ProfileScreen() {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
   const [formData, setFormData] = useState({
-    name: profile?.name || '',
+    name: profile?.name || user?.email?.split('@')[0] || '',
     phone_number: profile?.phone_number || '',
   });
 
@@ -55,7 +55,7 @@ export default function ProfileScreen() {
     }
   };
 
-  if (!profile) {
+  if (!user) {
     return (
       <SafeAreaView style={styles.container}>
         <View style={styles.loadingContainer}>
@@ -72,7 +72,7 @@ export default function ProfileScreen() {
           <View style={styles.avatarContainer}>
             <User size={48} color="#fff" />
           </View>
-          <Text style={styles.email}>{profile.email}</Text>
+          <Text style={styles.email}>{profile?.email || user.email || 'User'}</Text>
         </View>
 
         {error ? <Text style={styles.errorText}>{error}</Text> : null}
@@ -150,25 +150,25 @@ export default function ProfileScreen() {
             <>
               <View style={styles.infoGroup}>
                 <Text style={styles.infoLabel}>Name</Text>
-                <Text style={styles.infoValue}>{profile.name}</Text>
+                <Text style={styles.infoValue}>{profile?.name || 'Not set'}</Text>
               </View>
 
               <View style={styles.infoGroup}>
                 <Text style={styles.infoLabel}>Phone Number</Text>
                 <Text style={styles.infoValue}>
-                  {profile.phone_number || 'Not provided'}
+                  {profile?.phone_number || 'Not provided'}
                 </Text>
               </View>
 
               <View style={styles.infoGroup}>
                 <Text style={styles.infoLabel}>Email</Text>
-                <Text style={styles.infoValue}>{profile.email}</Text>
+                <Text style={styles.infoValue}>{profile?.email || user.email}</Text>
               </View>
 
               <View style={styles.infoGroup}>
                 <Text style={styles.infoLabel}>Member Since</Text>
                 <Text style={styles.infoValue}>
-                  {new Date(profile.created_at).toLocaleDateString()}
+                  {profile?.created_at ? new Date(profile.created_at).toLocaleDateString() : 'Today'}
                 </Text>
               </View>
             </>
