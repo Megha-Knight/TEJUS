@@ -96,6 +96,18 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         ]);
 
       if (profileError) throw profileError;
+
+      setUser(authData.user);
+      setSession(authData.session);
+      setProfile({
+        id: authData.user.id,
+        email,
+        name,
+        phone_number: null,
+        avatar_url: null,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+      });
     } catch (error) {
       throw error;
     }
